@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useGamelogData } from "@/context/GamelogContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,6 +119,13 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
     );
     const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
 
+    // Sort gamelog by date descending (most recent first)
+    const sortedGameLog = useMemo(() => {
+        return [...gameLogInfo].sort((a, b) =>
+            (b.date || "").localeCompare(a.date || "")
+        );
+    }, [gameLogInfo]);
+
     const handleColumnClick = (col: string) => {
         setHighlightedColumn(highlightedColumn === col ? null : col);
     };
@@ -200,7 +207,7 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
             prop = [prop];
         }
 
-        gameLogInfo.forEach((game, i) => {
+        sortedGameLog.forEach((game, i) => {
             // Skip games where player didn't play (no minutes)
             if (!game.mp || game.mp === "0:00") {
                 return;
@@ -332,7 +339,7 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
                             trendInfo={trendInfo}
                             checkValue={parseFloat(checkValue)}
                             overUnder={overUnder}
-                            gamelog={gameLogInfo}
+                            gamelog={sortedGameLog}
                         />
                     </CardContent>
                 </Card>
@@ -424,7 +431,7 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {gameLogInfo.map((game, g) => {
+                            {sortedGameLog.map((game, g) => {
                                 const isHit =
                                     propInfo.gamesHitList?.includes(g);
                                 const isRowHighlighted = highlightedRow === g;
