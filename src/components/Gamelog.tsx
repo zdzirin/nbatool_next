@@ -114,6 +114,18 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
     const [checkValue, setCheckValue] = useState<string>("1.5");
     const [propInfo, setPropInfo] = useState<PropInfo>({});
     const [trendInfo, setTrendInfo] = useState<Record<string, number>>({});
+    const [highlightedColumn, setHighlightedColumn] = useState<string | null>(
+        null,
+    );
+    const [highlightedRow, setHighlightedRow] = useState<number | null>(null);
+
+    const handleColumnClick = (col: string) => {
+        setHighlightedColumn(highlightedColumn === col ? null : col);
+    };
+
+    const handleRowClick = (rowIndex: number) => {
+        setHighlightedRow(highlightedRow === rowIndex ? null : rowIndex);
+    };
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -320,6 +332,7 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
                             trendInfo={trendInfo}
                             checkValue={parseFloat(checkValue)}
                             overUnder={overUnder}
+                            gamelog={gameLogInfo}
                         />
                     </CardContent>
                 </Card>
@@ -396,7 +409,15 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
                         <TableHeader>
                             <TableRow>
                                 {GamelogColumns.map((col) => (
-                                    <TableHead key={col}>
+                                    <TableHead
+                                        key={col}
+                                        onClick={() => handleColumnClick(col)}
+                                        className={`cursor-pointer select-none hover:bg-accent transition-colors ${
+                                            highlightedColumn === col
+                                                ? "bg-[var(--nba-logo-orange)]/30"
+                                                : ""
+                                        }`}
+                                    >
                                         {COLUMN_TO_LABEL[col]}
                                     </TableHead>
                                 ))}
@@ -406,6 +427,7 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
                             {gameLogInfo.map((game, g) => {
                                 const isHit =
                                     propInfo.gamesHitList?.includes(g);
+                                const isRowHighlighted = highlightedRow === g;
                                 return (
                                     <TableRow
                                         key={g}
@@ -413,24 +435,58 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
                                             isHit ? "bg-(--nba-green)/30" : ""
                                         }
                                     >
-                                        {GamelogColumns.map((col, i) => (
-                                            <TableCell
-                                                key={i}
-                                                className={
-                                                    i === 0
-                                                        ? "sticky left-0 bg-card"
-                                                        : ""
-                                                }
-                                                style={{
-                                                    backgroundColor:
-                                                        i === 0 && isHit
-                                                            ? colors.green
-                                                            : undefined,
-                                                }}
-                                            >
-                                                {game[col]}
-                                            </TableCell>
-                                        ))}
+                                        {GamelogColumns.map((col, i) => {
+                                            const isColHighlighted =
+                                                highlightedColumn === col;
+                                            const isFirstCol = i === 0;
+                                            const isDateCol = col === "date";
+
+                                            // Priority: column highlight > row highlight > prop hit > default
+                                            let bgColor: string | undefined;
+                                            if (
+                                                isColHighlighted &&
+                                                isRowHighlighted
+                                            ) {
+                                                bgColor = `${colors.logo_orange}60`;
+                                            } else if (isColHighlighted) {
+                                                bgColor = `${colors.logo_orange}40`;
+                                            } else if (isRowHighlighted) {
+                                                bgColor = isDateCol
+                                                    ? ""
+                                                    : `${colors.logo_orange}25`;
+                                            } else if (isFirstCol && isHit) {
+                                                bgColor = colors.green;
+                                            }
+
+                                            return (
+                                                <TableCell
+                                                    key={i}
+                                                    onClick={
+                                                        isDateCol
+                                                            ? () =>
+                                                                  handleRowClick(
+                                                                      g,
+                                                                  )
+                                                            : undefined
+                                                    }
+                                                    className={`${
+                                                        isFirstCol
+                                                            ? "sticky left-0 bg-card"
+                                                            : ""
+                                                    } ${
+                                                        isDateCol
+                                                            ? "cursor-pointer select-none"
+                                                            : ""
+                                                    }`}
+                                                    style={{
+                                                        backgroundColor:
+                                                            bgColor,
+                                                    }}
+                                                >
+                                                    {game[col]}
+                                                </TableCell>
+                                            );
+                                        })}
                                     </TableRow>
                                 );
                             })}
@@ -446,6 +502,7 @@ interface TrendInfoBarGraphProps {
     trendInfo: Record<string, number>;
     checkValue: number;
     overUnder: string;
+    gamelog: GameLogEntry[];
 }
 
 function formatDateShort(date: string): string {
@@ -461,19 +518,30 @@ function TrendInfoBarGraph({
     trendInfo,
     checkValue,
     overUnder,
+    gamelog,
 }: TrendInfoBarGraphProps) {
     const values = Object.values(trendInfo);
     let maxValue = Math.max(...values);
     maxValue += maxValue > 20 ? 5 : 2;
 
+    // Create a map of date to opponent team
+    const dateToTeam: Record<string, string> = {};
+    gamelog.forEach((game) => {
+        if (game.date && game.opp_name_abbr) {
+            const prefix = game.game_location ? "@" : "";
+            dateToTeam[game.date] = `${prefix}${game.opp_name_abbr}`;
+        }
+    });
+
     return (
-        <div className="h-75 overflow-x-scroll">
+        <div className="h-85 overflow-x-scroll">
             <div className="h-full flex flex-row flex-nowrap relative w-fit min-w-full">
                 {Object.entries(trendInfo).map(([date, value]) => {
                     const propHit =
                         (value > checkValue && overUnder === "O") ||
                         (value < checkValue && overUnder === "U");
                     const height = (value / maxValue) * 100;
+                    const team = dateToTeam[date] || "";
 
                     return (
                         <div
@@ -496,13 +564,16 @@ function TrendInfoBarGraph({
                             <span className="text-xs mt-1 whitespace-nowrap">
                                 {formatDateShort(date)}
                             </span>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                                {team}
+                            </span>
                         </div>
                     );
                 })}
                 <div
                     className="absolute left-0 right-0 h-0.5"
                     style={{
-                        bottom: `calc(${(checkValue / maxValue) * 100}% + 25px)`,
+                        bottom: `calc(${(checkValue / maxValue) * 100}% + 45px)`,
                         backgroundColor: colors.logo_orange,
                     }}
                 />
