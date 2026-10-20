@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { seasonLabel } from "../consts";
 
 const LINK_ATTRIBUTES = ["player", "team_id", "team_name_abbr", "name_display"];
 
@@ -34,6 +35,15 @@ export interface PBPPlayer {
   plus_minus_on?: string;
   plus_minus_net?: string;
   player_link?: string;
+}
+
+export interface PBPResponse {
+  // e.g. "2025-26": the season the data actually comes from
+  season: string;
+  // The season that was asked for. Differs from `season` when
+  // basketball-reference has no rows for it yet and we fell back a season.
+  requestedSeason: string;
+  data: PBPPlayer[];
 }
 
 interface CheerioElement {
@@ -131,15 +141,17 @@ const parseRow = (el: CheerioElement): PBPPlayer | null => {
   return player.team_id !== "2TM" ? (player as unknown as PBPPlayer) : null;
 };
 
-export async function getLeaguePBPRoster(year: number): Promise<PBPPlayer[]> {
+async function scrapeSeason(year: number): Promise<PBPPlayer[]> {
   const url = `https://www.basketball-reference.com/leagues/NBA_${year}_play-by-play.html`;
   const players: PBPPlayer[] = [];
 
   const res = await fetch(url);
+  if (!res.ok) throw new Error(`basketball-reference ${year} fetch failed: ${res.status}`);
   const data = await res.text();
 
   const start = data.indexOf("<table");
-  const end = data.indexOf("</table>") + 8;
+  if (start === -1) return players;
+  const end = data.indexOf("</table>", start) + 8;
   const table = data.substring(start, end);
 
   const $ = cheerio.load(table);
@@ -151,4 +163,22 @@ export async function getLeaguePBPRoster(year: number): Promise<PBPPlayer[]> {
   });
 
   return players;
+}
+
+// `year` is the season's end year (2027 = 2026-27). basketball-reference
+// publishes the page before opening night with no player rows, so an empty
+// season falls back to the one before it.
+export async function getLeaguePBPRoster(year: number): Promise<PBPResponse> {
+  const requestedSeason = seasonLabel(year);
+
+  const players = await scrapeSeason(year);
+  if (players.length > 0) {
+    return { season: requestedSeason, requestedSeason, data: players };
+  }
+
+  return {
+    season: seasonLabel(year - 1),
+    requestedSeason,
+    data: await scrapeSeason(year - 1),
+  };
 }

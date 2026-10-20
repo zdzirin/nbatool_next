@@ -32,20 +32,21 @@ export function Matchup({
     onSelectPlayer,
 }: MatchupProps) {
     return (
-        <Card className="mb-6 bg-card/80">
-            <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle>Matchup</CardTitle>
+        // Full bleed on mobile: cancel the page gutter and drop the side
+        // borders/radius to give the tables more width
+        <Card className="-mx-4 mb-6 rounded-none border-x-0 bg-card/80 sm:mx-0 sm:rounded-xl sm:border-x">
+            <CardHeader className="flex flex-row items-center justify-between px-3 sm:px-6">
+                <CardTitle className="flex items-center gap-2">
+                    <TeamSelect compact value={teamA} onChange={onTeamAChange} />
+                    <span className="font-normal text-muted-foreground">v</span>
+                    <TeamSelect compact value={teamB} onChange={onTeamBChange} />
+                </CardTitle>
                 <Button variant="destructive" size="icon" onClick={remove}>
                     <Trash2 />
                 </Button>
             </CardHeader>
 
-            <CardContent>
-                <div className="flex justify-around gap-4 mb-6 flex-wrap">
-                    <TeamSelect value={teamA} onChange={onTeamAChange} />
-                    <TeamSelect value={teamB} onChange={onTeamBChange} />
-                </div>
-
+            <CardContent className="px-3 sm:px-6">
                 {teamA && teamB && (
                     <>
                         {/* Highlighted Plays - Collapsible */}
@@ -91,7 +92,7 @@ export function Matchup({
                                 </TabsList>
                                 <TabsContent value="teamA-roster">
                                     <Card className="bg-card/50">
-                                        <CardContent className="pt-4">
+                                        <CardContent className="px-3 sm:px-6">
                                             <PBPRoster
                                                 team={teamA}
                                                 setSelectedPlayer={
@@ -104,14 +105,14 @@ export function Matchup({
                                 </TabsContent>
                                 <TabsContent value="teamB-defense">
                                     <Card className="bg-card/50">
-                                        <CardContent className="pt-4">
+                                        <CardContent className="px-3 sm:px-6">
                                             <DBPStats team={teamB} />
                                         </CardContent>
                                     </Card>
                                 </TabsContent>
                                 <TabsContent value="teamB-roster">
                                     <Card className="bg-card/50">
-                                        <CardContent className="pt-4">
+                                        <CardContent className="px-3 sm:px-6">
                                             <PBPRoster
                                                 team={teamB}
                                                 setSelectedPlayer={
@@ -124,7 +125,7 @@ export function Matchup({
                                 </TabsContent>
                                 <TabsContent value="teamA-defense">
                                     <Card className="bg-card/50">
-                                        <CardContent className="pt-4">
+                                        <CardContent className="px-3 sm:px-6">
                                             <DBPStats team={teamA} />
                                         </CardContent>
                                     </Card>
@@ -136,7 +137,7 @@ export function Matchup({
                         <div className="hidden lg:block">
                             <div className="grid grid-cols-2 gap-4 mb-6">
                                 <Card className="bg-card/50">
-                                    <CardContent className="pt-4">
+                                    <CardContent>
                                         <PBPRoster
                                             team={teamA}
                                             setSelectedPlayer={onSelectPlayer}
@@ -145,7 +146,7 @@ export function Matchup({
                                     </CardContent>
                                 </Card>
                                 <Card className="bg-card/50">
-                                    <CardContent className="pt-4">
+                                    <CardContent>
                                         <DBPStats team={teamB} />
                                     </CardContent>
                                 </Card>
@@ -153,7 +154,7 @@ export function Matchup({
 
                             <div className="grid grid-cols-2 gap-4">
                                 <Card className="bg-card/50">
-                                    <CardContent className="pt-4">
+                                    <CardContent>
                                         <PBPRoster
                                             team={teamB}
                                             setSelectedPlayer={onSelectPlayer}
@@ -162,7 +163,7 @@ export function Matchup({
                                     </CardContent>
                                 </Card>
                                 <Card className="bg-card/50">
-                                    <CardContent className="pt-4">
+                                    <CardContent>
                                         <DBPStats team={teamA} />
                                     </CardContent>
                                 </Card>

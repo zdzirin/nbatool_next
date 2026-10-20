@@ -8,10 +8,12 @@ import {
   ReactNode,
 } from "react";
 import { getYearForResults } from "@/lib/consts";
-import type { PBPPlayer } from "@/lib/scraping/pbproster";
+import type { PBPPlayer, PBPResponse } from "@/lib/scraping/pbproster";
 
 interface PBPContextType {
   PBPData: PBPPlayer[];
+  season: string;
+  requestedSeason: string;
   setUsePrevRosters: (value: boolean) => void;
   usePrevRosters: boolean;
 }
@@ -24,6 +26,8 @@ interface PBPContextProviderProps {
 
 export const PBPContextProvider = ({ children }: PBPContextProviderProps) => {
   const [PBPData, setPBPData] = useState<PBPPlayer[]>([]);
+  const [season, setSeason] = useState("");
+  const [requestedSeason, setRequestedSeason] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [usePrevRosters, setUsePrevRosters] = useState(false);
@@ -35,9 +39,14 @@ export const PBPContextProvider = ({ children }: PBPContextProviderProps) => {
 
     setLoading(true);
     fetch("/api/pbp_roster?year=" + year)
-      .then((res) => res.json())
-      .then((data) => {
-        setPBPData(data);
+      .then((res) => {
+        if (!res.ok) throw new Error(`PBP request failed: ${res.status}`);
+        return res.json();
+      })
+      .then((res: PBPResponse) => {
+        setPBPData(res.data);
+        setSeason(res.season);
+        setRequestedSeason(res.requestedSeason);
       })
       .catch((e) => {
         console.error("Error fetching PBP data:", e);
@@ -69,7 +78,13 @@ export const PBPContextProvider = ({ children }: PBPContextProviderProps) => {
   }
 
   return (
-    <PBPContext.Provider value={{ PBPData, setUsePrevRosters, usePrevRosters }}>
+    <PBPContext.Provider value={{
+        PBPData,
+        season,
+        requestedSeason,
+        setUsePrevRosters,
+        usePrevRosters,
+      }}>
       {children}
     </PBPContext.Provider>
   );
@@ -81,7 +96,8 @@ export const usePBPRosters = () => {
     throw new Error("usePBPRosters must be used within a PBPContextProvider");
   }
 
-  const { PBPData, setUsePrevRosters, usePrevRosters } = context;
+  const { PBPData, season, requestedSeason, setUsePrevRosters, usePrevRosters } =
+    context;
 
   const getTeamPBPRoster = (team: string): PBPPlayer[] => {
     if (!team) return [];
@@ -93,6 +109,8 @@ export const usePBPRosters = () => {
   return {
     PBPRoster: PBPData,
     getTeamPBPRoster,
+    season,
+    requestedSeason,
     setUsePrevRosters,
     usePrevRosters,
   };

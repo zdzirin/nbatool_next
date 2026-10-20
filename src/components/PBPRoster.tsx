@@ -1,8 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Users } from "lucide-react";
 import { ABBREVIATION_TO_TEAM, colors } from "@/lib/consts";
 import { usePBPRosters } from "@/context/PBPContext";
+import { SeasonBadge } from "@/components/SeasonBadge";
 import {
   Table,
   TableBody,
@@ -42,7 +44,7 @@ export default function PBPRoster({
   setSelectedPlayer = () => {},
   constrain = false,
 }: PBPRosterProps) {
-  const { getTeamPBPRoster } = usePBPRosters();
+  const { getTeamPBPRoster, season, requestedSeason } = usePBPRosters();
   const [roster, setRoster] = useState<PBPPlayer[]>([]);
   const [selectedPosition, setSelectedPosition] = useState<string>("");
 
@@ -70,8 +72,14 @@ export default function PBPRoster({
 
   return (
     <div className="w-full">
-      <h3 className="mb-4 text-lg font-semibold text-[var(--nba-almost-white)]">
+      <h3 className="mb-4 flex flex-wrap items-center gap-2 text-lg font-semibold text-foreground">
+        <Users className="h-5 w-5 shrink-0" />
         {ABBREVIATION_TO_TEAM[team]} Play By Play Roster
+        <SeasonBadge
+          season={season}
+          requestedSeason={requestedSeason}
+          dataName="roster"
+        />
       </h3>
       <div className={constrain ? "max-h-[400px] overflow-y-auto" : ""}>
         <Table>

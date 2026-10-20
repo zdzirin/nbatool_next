@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { useDBPData, TeamDBPDataItem } from "@/context/DBPContext";
-import { ABBREVIATION_TO_TEAM, colors } from "@/lib/consts";
+import { Shield } from "lucide-react";
+import { useDBPData } from "@/context/DBPContext";
+import { ABBREVIATION_TO_TEAM, DBP_STATS, colors } from "@/lib/consts";
+import { SeasonBadge } from "@/components/SeasonBadge";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -14,16 +16,6 @@ import {
 } from "@/components/ui/table";
 import type { StatValue } from "@/lib/scraping/defensebyposition";
 
-const DBP_INDEX_TO_STAT: Record<number, keyof Omit<TeamDBPDataItem, "range" | "position" | "team">> = {
-  0: "pts",
-  1: "reb",
-  2: "ast",
-  3: "tpm",
-  4: "stl",
-  5: "blk",
-  6: "to",
-};
-
 const STAT_LABELS = ["PTS", "REB", "AST", "TPM", "STL", "BLK", "TO"];
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 
@@ -32,7 +24,7 @@ interface DBPStatsProps {
 }
 
 export default function DBPStats({ team }: DBPStatsProps) {
-  const { getTeamDBPData } = useDBPData();
+  const { getTeamDBPData, ranges, season, requestedSeason } = useDBPData();
   const stats = getTeamDBPData(team);
 
   stats.sort(
@@ -47,44 +39,49 @@ export default function DBPStats({ team }: DBPStatsProps) {
     return "";
   };
 
+  if (ranges.length === 0) {
+    return (
+      <div className="w-full">
+        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-foreground">
+          <Shield className="h-5 w-5 shrink-0" />
+          {ABBREVIATION_TO_TEAM[team]} Defense vs Position
+        </h3>
+        <p className="text-sm text-muted-foreground">
+          Defense vs position data is unavailable right now.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
-      <h3 className="mb-4 text-lg font-semibold text-[var(--nba-almost-white)]">
+      <h3 className="mb-4 flex flex-wrap items-center gap-2 text-lg font-semibold text-foreground">
+        <Shield className="h-5 w-5 shrink-0" />
         {ABBREVIATION_TO_TEAM[team]} Defense vs Position
+        <SeasonBadge
+          season={season}
+          requestedSeason={requestedSeason}
+          dataName="defense"
+        />
       </h3>
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-sm text-muted-foreground">
-          Stat Range (Games):
-        </span>
-        <Button
-          variant={range === 0 ? "default" : "outline"}
-          size="sm"
-          onClick={() => setRange(0)}
-        >
-          Season
-        </Button>
-        <Button
-          variant={range === 7 ? "default" : "outline"}
-          size="sm"
-          onClick={() => setRange(7)}
-        >
-          7
-        </Button>
-        <Button
-          variant={range === 15 ? "default" : "outline"}
-          size="sm"
-          onClick={() => setRange(15)}
-        >
-          15
-        </Button>
-        <Button
-          variant={range === 30 ? "default" : "outline"}
-          size="sm"
-          onClick={() => setRange(30)}
-        >
-          30
-        </Button>
-      </div>
+      {/* Recent ranges only exist while the season is in progress */}
+      {ranges.length > 1 && (
+        <div className="flex items-center gap-2 mb-4">
+          <span className="text-sm text-muted-foreground">
+            Stat Range (Days):
+          </span>
+          {ranges.map((r) => (
+            <Button
+              key={r}
+              variant={range === r ? "default" : "outline"}
+              size="sm"
+              onClick={() => setRange(r)}
+            >
+              {r === 0 ? "Season" : r}
+            </Button>
+          ))}
+        </div>
+      )}
 
       <Table>
         <TableHeader>
@@ -101,14 +98,13 @@ export default function DBPStats({ team }: DBPStatsProps) {
             .map((row, rowIdx) => (
               <TableRow key={rowIdx}>
                 <TableCell className="font-semibold">{row.position}</TableCell>
-                {[0, 1, 2, 3, 4, 5, 6].map((i) => {
-                  const statKey = DBP_INDEX_TO_STAT[i];
-                  const stat = row[statKey] as StatValue;
+                {DBP_STATS.map((statKey) => {
+                  const stat = row[statKey];
                   const color = getStatColor(stat);
 
                   return (
                     <TableCell
-                      key={i}
+                      key={statKey}
                       className="relative"
                       style={{
                         borderTop:

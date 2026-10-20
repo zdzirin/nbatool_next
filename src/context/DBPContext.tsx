@@ -8,10 +8,16 @@ import {
   ReactNode,
 } from "react";
 import { getYearForResults } from "@/lib/consts";
-import type { DBPData, StatValue } from "@/lib/scraping/defensebyposition";
+import type {
+  DBPData,
+  DBPResponse,
+  DBPTeamData,
+} from "@/lib/scraping/defensebyposition";
 
 interface DBPContextType {
   DBPData: DBPData;
+  season: string;
+  requestedSeason: string;
   usePrevDBP: boolean;
   setUsePrevDBP: (value: boolean) => void;
 }
@@ -22,23 +28,16 @@ interface DBPContextProviderProps {
   children: ReactNode;
 }
 
-export interface TeamDBPDataItem {
+export type TeamDBPDataItem = {
   range: string;
   position: string;
-  team: string;
-  pts: StatValue;
-  reb: StatValue;
-  ast: StatValue;
-  tpm: StatValue;
-  stl: StatValue;
-  blk: StatValue;
-  to: StatValue;
-}
+} & DBPTeamData;
 
 export const DBPContextProvider = ({ children }: DBPContextProviderProps) => {
   const [DBPData, setDBPData] = useState<DBPData>({});
+  const [season, setSeason] = useState("");
+  const [requestedSeason, setRequestedSeason] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
   const [usePrevDBP, setUsePrevDBP] = useState(false);
 
   useEffect(() => {
@@ -46,13 +45,22 @@ export const DBPContextProvider = ({ children }: DBPContextProviderProps) => {
 
     setLoading(true);
     fetch("/api/full_dbp_stats?year=" + year)
-      .then((res) => res.json())
-      .then((data) => {
-        setDBPData(data);
+      .then((res) => {
+        if (!res.ok) throw new Error(`DBP request failed: ${res.status}`);
+        return res.json();
+      })
+      .then((res: DBPResponse) => {
+        setDBPData(res.data);
+        setSeason(res.season);
+        setRequestedSeason(res.requestedSeason);
       })
       .catch((e) => {
+        // Don't block the rest of the app on a scraped source; DBPStats
+        // shows the empty state
         console.error("Error fetching DBP data:", e);
-        setError(e);
+        setDBPData({});
+        setSeason("");
+        setRequestedSeason("");
       })
       .finally(() => {
         setLoading(false);
@@ -69,18 +77,8 @@ export const DBPContextProvider = ({ children }: DBPContextProviderProps) => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <h1 className="text-red-500 text-xl">
-          Error loading data. Please try again.
-        </h1>
-      </div>
-    );
-  }
-
   return (
-    <DBPContext.Provider value={{ DBPData, usePrevDBP, setUsePrevDBP }}>
+    <DBPContext.Provider value={{ DBPData, season, requestedSeason, usePrevDBP, setUsePrevDBP }}>
       {children}
     </DBPContext.Provider>
   );
@@ -92,15 +90,14 @@ export const useDBPData = () => {
     throw new Error("useDBPData must be used within a DBPContextProvider");
   }
 
-  const { DBPData, usePrevDBP, setUsePrevDBP } = context;
+  const { DBPData, season, requestedSeason, usePrevDBP, setUsePrevDBP } =
+    context;
 
   const getTeamDBPData = (team: string): TeamDBPDataItem[] => {
     const teamData: TeamDBPDataItem[] = [];
 
     Object.keys(DBPData).forEach((range) => {
       Object.keys(DBPData[range]).forEach((position) => {
-        if (position === "ALL") return;
-
         const data = DBPData[range][position].find((e) => e.team === team);
         if (!data) {
           console.log(`Can't find ${team} in ${range}: ${position}`);
@@ -114,5 +111,16 @@ export const useDBPData = () => {
     return teamData;
   };
 
-  return { getTeamDBPData, usePrevDBP, setUsePrevDBP };
+  const ranges = Object.keys(DBPData)
+    .map((range) => parseInt(range))
+    .sort((a, b) => a - b);
+
+  return {
+    getTeamDBPData,
+    ranges,
+    season,
+    requestedSeason,
+    usePrevDBP,
+    setUsePrevDBP,
+  };
 };

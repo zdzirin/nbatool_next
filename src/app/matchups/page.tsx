@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Plus } from "lucide-react";
 import { Matchup, SelectedPlayer } from "@/components/Matchup";
 import { Gamelog } from "@/components/Gamelog";
+import { TodaysGames } from "@/components/TodaysGames";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -115,6 +116,16 @@ export default function MatchupsPage() {
         setMatchups([...matchups, { id: Date.now(), teamA: "", teamB: "" }]);
     };
 
+    // Fill the first empty matchup if there is one, otherwise add a new one
+    const addGame = (teamA: string, teamB: string) => {
+        const empty = matchups.find((m) => !m.teamA && !m.teamB);
+        const newMatchups = empty
+            ? matchups.map((m) => (m.id === empty.id ? { ...m, teamA, teamB } : m))
+            : [...matchups, { id: Date.now(), teamA, teamB }];
+        setMatchups(newMatchups);
+        updateURL(newMatchups, selectedPlayer);
+    };
+
     const removeMatchup = (id: number) => {
         const newMatchups = matchups.filter((m) => m.id !== id);
         const result =
@@ -201,29 +212,27 @@ export default function MatchupsPage() {
                 </Drawer>
             )}
 
-            <div className="flex justify-end mb-4">
-                <Button onClick={addMatchup} size="sm">
+            <TodaysGames matchups={matchups} onSelectGame={addGame} />
+
+            {matchups.map((m) => (
+                <div key={m.id} id={`matchup-${m.id}`} className="scroll-mt-4">
+                    <Matchup
+                        remove={() => removeMatchup(m.id)}
+                        teamA={m.teamA}
+                        teamB={m.teamB}
+                        onTeamAChange={(team) => updateTeamA(m.id, team)}
+                        onTeamBChange={(team) => updateTeamB(m.id, team)}
+                        onSelectPlayer={handleSelectPlayer}
+                    />
+                </div>
+            ))}
+
+            <div className="flex justify-end mt-2">
+                <Button onClick={addMatchup}>
                     <Plus className="w-4 h-4 mr-1" />
                     Add Matchup
                 </Button>
             </div>
-
-            {matchups.map((m) => (
-                <Matchup
-                    key={m.id}
-                    remove={() => removeMatchup(m.id)}
-                    teamA={m.teamA}
-                    teamB={m.teamB}
-                    onTeamAChange={(team) => updateTeamA(m.id, team)}
-                    onTeamBChange={(team) => updateTeamB(m.id, team)}
-                    onSelectPlayer={handleSelectPlayer}
-                />
-            ))}
-
-            <Button onClick={addMatchup} className="mt-2">
-                <Plus className="w-4 h-4 mr-1" />
-                Add Matchup
-            </Button>
         </div>
     );
 }

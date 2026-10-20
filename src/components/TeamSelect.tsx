@@ -28,12 +28,15 @@ interface TeamSelectProps {
   value: string;
   onChange?: (value: string) => void;
   className?: string;
+  // Show the abbreviation in the trigger instead of the full name
+  compact?: boolean;
 }
 
 export function TeamSelect({
   value,
   onChange = () => {},
   className = "",
+  compact = false,
 }: TeamSelectProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -46,13 +49,21 @@ export function TeamSelect({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className={cn("w-[220px] justify-between", className)}
+          title={compact ? selectedTeam?.label : undefined}
+          className={cn(
+            compact ? "w-auto gap-1 px-2 font-semibold" : "w-[220px] justify-between",
+            className
+          )}
         >
-          {selectedTeam ? selectedTeam.label : "Select team..."}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          {compact
+            ? selectedTeam?.value ?? "Team"
+            : selectedTeam?.label ?? "Select team..."}
+          <ChevronsUpDown
+            className={cn("h-4 w-4 shrink-0 opacity-50", !compact && "ml-2")}
+          />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[220px] p-0">
+      <PopoverContent className="w-[220px] p-0" align="start">
         <Command>
           <CommandInput placeholder="Search team..." />
           <CommandList>

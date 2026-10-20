@@ -11,14 +11,29 @@ export const PBP_PLAYER_DATA = [
   "plus_minus_net",
 ];
 
-export const DBP_INDEX_TO_STAT: Record<number, string> = {
-  1: "pts",
-  2: "reb",
-  3: "ast",
-  4: "tpm",
-  5: "stl",
-  6: "blk",
-  7: "to",
+export const DBP_STATS = ["pts", "reb", "ast", "tpm", "stl", "blk", "to"] as const;
+
+// Hashtag Basketball abbreviations that differ from ours
+export const HASHTAG_TO_ABBREVIATION: Record<string, string> = {
+  BKN: "BRK",
+  CHA: "CHO",
+  GS: "GSW",
+  NO: "NOP",
+  NY: "NYK",
+  SA: "SAS",
+};
+
+// ESPN abbreviations that differ from ours
+export const ESPN_TO_ABBREVIATION: Record<string, string> = {
+  BKN: "BRK",
+  CHA: "CHO",
+  GS: "GSW",
+  NO: "NOP",
+  NY: "NYK",
+  PHX: "PHO",
+  SA: "SAS",
+  UTAH: "UTA",
+  WSH: "WAS",
 };
 
 export const ABBREVIATION_TO_TEAM: Record<string, string> = {
@@ -95,6 +110,10 @@ export const colors = {
   yellow_orange: "#E6A340",
   almostWhite: "#e7e0da",
 };
+
+// `endYear` 2026 -> "2025-26"
+export const seasonLabel = (endYear: number) =>
+  `${endYear - 1}-${String(endYear).slice(-2)}`;
 
 export const getYearForResults = (): number => {
   const now = new Date();

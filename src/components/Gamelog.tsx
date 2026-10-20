@@ -285,11 +285,19 @@ export function Gamelog({ name, id, closeModal }: GamelogProps) {
                 {name} Gamelog
             </h2>
 
-            <p className="text-lg mb-4 text-(--nba-almost-white)">
-                {propInfo.games !== undefined
-                    ? `${name} has hit ${overUnder} ${checkValue} ${selectedProp}'s in ${propInfo.gamesHit} / ${propInfo.games} games or ${Math.floor(((propInfo.gamesHit || 0) / propInfo.games) * 100)}% of the time.`
-                    : ""}
-            </p>
+            {propInfo.games !== undefined && (
+                <div className="flex flex-wrap gap-4 mb-4 text-(--nba-almost-white) text-lg font-medium">
+                    <span>{overUnder} {checkValue} {selectedProp}</span>
+                    <span className="text-muted-foreground">|</span>
+                    <span>{propInfo.gamesHit}/{propInfo.games}</span>
+                    <span className="text-muted-foreground">|</span>
+                    <span>{Math.floor(((propInfo.gamesHit || 0) / propInfo.games) * 100)}%</span>
+                    <span className="text-muted-foreground">|</span>
+                    <span className="font-bold" style={{ color: colors.green }}>
+                        {calculateAmericanOdds((propInfo.gamesHit || 0) / propInfo.games)}
+                    </span>
+                </div>
+            )}
 
             <div className="flex flex-wrap gap-4 mb-4">
                 <Select value={selectedProp} onValueChange={setSelectedProp}>
@@ -519,6 +527,20 @@ function formatDateShort(date: string): string {
         return `${parts[1]}/${parts[2]}`;
     }
     return date;
+}
+
+function calculateAmericanOdds(probability: number): string {
+    if (probability <= 0) return "+∞";
+    if (probability >= 1) return "-∞";
+    if (probability === 0.5) return "-100";
+
+    if (probability > 0.5) {
+        const odds = Math.round(-100 * (probability / (1 - probability)));
+        return odds.toString();
+    } else {
+        const odds = Math.round(100 * ((1 - probability) / probability));
+        return `+${odds}`;
+    }
 }
 
 function TrendInfoBarGraph({
